@@ -7,7 +7,47 @@
 #include <iostream>
 #include <cstring>
 
+#pragma warning(disable:4244)
+#pragma warning(disable:4838)
+#pragma warning(disable:4267)
+#pragma warning(disable:4309)
+#pragma warning(disable:4305)
+
 #define _XOR_KEY_ 0x12138
+
+#define CALL(FuncType, func_name) \
+    [&]() -> auto { \
+        constexpr CompileTimeStringEncrypt<sizeof(#func_name)> encrypted_##func(#func_name); \
+        return call<FuncType>(encrypted_##func.decrypt()); \
+    }()
+
+#define CALL_IN_MODULE(FuncType, module_name, func_name) \
+	[&]() -> auto { \
+        constexpr CompileTimeStringEncrypt<sizeof(#func_name)> encrypted_##func(#func_name); \
+        constexpr CompileTimeStringEncrypt<sizeof(#module_name)> encrypted_##md(#module_name); \
+        return call_in_module<FuncType>(encrypted_##md.decrypt(), encrypted_##func.decrypt()); \
+    }()
+
+#define REGISTER_FUNCTION(func) \
+    namespace { \
+        static const CompileTimeStringEncrypt<sizeof(#func)> encrypted_str_##func(#func); \
+        \
+        struct Register_##func { \
+            Register_##func() { \
+                FunctionRegistry::register_function_encrypted( \
+                    encrypted_str_##func.getEncryptedData(), \
+                    encrypted_str_##func.getEncryptedSize() - 1, \
+                    (void*)func); \
+            } \
+        } register_instance_##func; \
+    }
+
+#define SecutyString(str) \
+[&]() -> auto { \
+        constexpr CompileTimeStringEncrypt<sizeof(##str)> encrypted_str(##str); \
+        return encrypted_str.decrypt(); \
+    }().c_str()
+
 
 #define CryptCall(FuncType, FuncAddr) \
     [this]() -> auto { \
@@ -531,7 +571,7 @@ private:
 	{
 		void* module_base = nullptr;
 
-		if (module_name == "current" || module_name.empty())
+		if (module_name == SecutyString("current") || module_name.empty())
 		{
 			void* func_address = FunctionRegistry::get_function(func_name);
 			if (func_address != nullptr)
@@ -574,21 +614,21 @@ public:
 	{
 		if (!has_module_)
 		{
-			module_name_ = "current";
+			module_name_ = SecutyString("current");
 			has_module_ = true;
 			crypt_func_ptr_ = get_func(module_name_, func_name_);
 		}
 
 		if (!crypt_func_ptr_)
 		{
-			throw std::runtime_error("Function '" + func_name_ + "' not found in module: " + module_name_);
+			throw std::runtime_error(SecutyString("Function '") + func_name_ + SecutyString("' not found in module: ") + module_name_);
 		}
 
 		uint64_t func_address = crypt_func_ptr_->decrypt_value();
 
 		if (func_address == 0)
 		{
-			throw std::runtime_error("Decrypted function address is null");
+			throw std::runtime_error(("Decrypted function address is null"));
 		}
 
 		auto func = reinterpret_cast<FuncType>(func_address);
@@ -610,30 +650,3 @@ auto call_in_module(const std::string& module_name, const std::string& func_name
 }
 
 
-
-#define CALL(FuncType, func_name) \
-    [&]() -> auto { \
-        constexpr CompileTimeStringEncrypt<sizeof(#func_name)> encrypted_##func(#func_name); \
-        return call<FuncType>(encrypted_##func.decrypt()); \
-    }()
-
-#define CALL_IN_MODULE(FuncType, module_name, func_name) \
-	[&]() -> auto { \
-        constexpr CompileTimeStringEncrypt<sizeof(#func_name)> encrypted_##func(#func_name); \
-        constexpr CompileTimeStringEncrypt<sizeof(#module_name)> encrypted_##md(#module_name); \
-        return call_in_module<FuncType>(encrypted_##md.decrypt(), encrypted_##func.decrypt()); \
-    }()
-
-#define REGISTER_FUNCTION(func) \
-    namespace { \
-        static constexpr CompileTimeStringEncrypt<sizeof(#func)> encrypted_str_##func(#func); \
-        \
-        struct Register_##func { \
-            Register_##func() { \
-                FunctionRegistry::register_function_encrypted( \
-                    encrypted_str_##func.getEncryptedData(), \
-                    encrypted_str_##func.getEncryptedSize() - 1, \
-                    (void*)func); \
-            } \
-        } register_instance_##func; \
-    }
