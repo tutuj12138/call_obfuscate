@@ -1,3 +1,20 @@
+//                              ,--,      ,--,                                          
+//                           ,---.'|   ,---.'|          ,----..                         
+//   ,----..     ,---,       |   | :   |   | :         /   /   \      ,---,.     ,---,. 
+//  /   /   \   '  .' \      :   : |   :   : |        /   .     :   ,'  .'  \  ,'  .' | 
+// |   :     : /  ;    '.    |   ' :   |   ' :       .   /   ;.  \,---.' .' |,---.'   | 
+// .   |  ;. /:  :       \   ;   ; '   ;   ; '      .   ;   /  ` ;|   |  |: ||   |   .' 
+// .   ; /--` :  |   /\   \  '   | |__ '   | |__    ;   |  ; \ ; |:   :  :  /:   :  :   
+// ;   | ;    |  :  ' ;.   : |   | :.'||   | :.'|   |   :  | ; | ':   |    ; :   |  |-, 
+// |   : |    |  |  ;/  \   \'   :    ;'   :    ;   .   |  ' ' ' :|   :     \|   :  ;/| 
+// .   | '___ '  :  | \  \ ,'|   |  ./ |   |  ./    '   ;  \; /  ||   |   . ||   |   .' 
+// '   ; : .'||  |  '  '--'  ;   : ;   ;   : ;    ___\   \  ',  / '   :  '; |'   :  '   
+// '   | '/  :|  :  :        |   ,/    |   ,/  .'  .`|;   :    /  |   |  | ; |   |  |   
+// |   :    / |  | ,'        '---'     '---'.'  .'   : \   \ .'   |   :   /  |   :  \   
+//  \   \ .'  `--''                      ,---, '   .'   `---`     |   | ,'   |   | ,'   
+//   `---`                               ;   |  .'                `----'     `----'     
+//                                       `---'                                          
+#pragma once
 #include <windows.h>
 #include <string>
 #include <random>
@@ -13,41 +30,7 @@
 #pragma warning(disable:4309)
 #pragma warning(disable:4305)
 
-#define _XOR_KEY_ 0x12138
-
-#define CALL(FuncType, func_name) \
-    [&]() -> auto { \
-        constexpr CompileTimeStringEncrypt<sizeof(#func_name)> encrypted_##func(#func_name); \
-        return call<FuncType>(encrypted_##func.decrypt()); \
-    }()
-
-#define CALL_IN_MODULE(FuncType, module_name, func_name) \
-	[&]() -> auto { \
-        constexpr CompileTimeStringEncrypt<sizeof(#func_name)> encrypted_##func(#func_name); \
-        constexpr CompileTimeStringEncrypt<sizeof(#module_name)> encrypted_##md(#module_name); \
-        return call_in_module<FuncType>(encrypted_##md.decrypt(), encrypted_##func.decrypt()); \
-    }()
-
-#define REGISTER_FUNCTION(func) \
-    namespace { \
-        static const CompileTimeStringEncrypt<sizeof(#func)> encrypted_str_##func(#func); \
-        \
-        struct Register_##func { \
-            Register_##func() { \
-                FunctionRegistry::register_function_encrypted( \
-                    encrypted_str_##func.getEncryptedData(), \
-                    encrypted_str_##func.getEncryptedSize() - 1, \
-                    (void*)func); \
-            } \
-        } register_instance_##func; \
-    }
-
-#define SecutyString(str) \
-[&]() -> auto { \
-        constexpr CompileTimeStringEncrypt<sizeof(##str)> encrypted_str(##str); \
-        return encrypted_str.decrypt(); \
-    }().c_str()
-
+#define _XOR_KEY_ 0x78
 
 #define CryptCall(FuncType, FuncAddr) \
     [this]() -> auto { \
@@ -71,6 +54,41 @@
             return (this->*restored_ptr)(std::forward<decltype(args)>(args)...); \
         }; \
     }()
+
+#define CALL(FuncType, func_name) \
+    [&]() -> auto { \
+        constexpr CompileTimeStringEncrypt<sizeof(#func_name)> encrypted_##func(#func_name); \
+        return call<FuncType>(encrypted_##func.decrypt()); \
+    }()
+
+#define CALL_IN_MODULE(FuncType, module_name, func_name) \
+	[&]() -> auto { \
+        constexpr CompileTimeStringEncrypt<sizeof(#func_name)> encrypted_##func(#func_name); \
+        constexpr CompileTimeStringEncrypt<sizeof(#module_name)> encrypted_##md(#module_name); \
+        return call_in_module<FuncType>(encrypted_##md.decrypt(), encrypted_##func.decrypt()); \
+    }()
+
+#define REGISTER_FUNCTION(func) \
+    namespace { \
+        static const CompileTimeStringEncrypt<sizeof(#func)> encrypted_str_##func(#func); \
+        \
+        struct Register_##func { \
+            Register_##func() { \
+				reinterpret_cast<void(*)(const char*, size_t, void*)> (\
+				Crypt(reinterpret_cast<uint64_t>(FunctionRegistry::register_function_encrypted)).decrypt_value())( \
+                    encrypted_str_##func.getEncryptedData(), \
+                    encrypted_str_##func.getEncryptedSize() - 1, \
+                    (void*)func); \
+            } \
+        } register_instance_##func; \
+    }
+
+#define SecutyString(str) \
+[&]() -> auto { \
+        constexpr CompileTimeStringEncrypt<sizeof(##str)> encrypted_str(##str); \
+        return encrypted_str.decrypt(); \
+    }().c_str()
+
 
 class Crypt {
 private:
