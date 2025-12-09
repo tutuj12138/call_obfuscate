@@ -54,8 +54,4 @@ int main()
 ## Usage effect
 ![alt text](img/image.png)
 
-## v12.4
-* Function calls and SecurityString implement the new control flow flattening function.
 
-## to be implemented
-* Supports wide characters
