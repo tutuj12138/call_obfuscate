@@ -21,6 +21,7 @@ REGISTER_FUNCTION(system)
 // 使用示例
 int main()
 {
+
 	try {
 
 
@@ -28,10 +29,16 @@ int main()
 
 		CALL(int (*)(
 			_In_z_ _Printf_format_string_ char const* const _Format,
-			...), printf)("%d\r\n", CALL_IN_MODULE(int(*)(), kernel32.dll, GetCurrentProcessId)());
+			...), printf)(SecutyString("%d\r\n"), CALL_IN_MODULE(int(*)(), kernel32.dll, GetCurrentProcessId)());
 
 
-		CALL_IN_MODULE(int(*)(HWND, LPCSTR, LPCSTR, UINT), user32.dll, MessageBoxA)(nullptr, SecutyString("Hello from secure call!"), SecutyString("Test"), MB_OK);
+		CALL_IN_MODULE(int(*)(HWND, LPCSTR, LPCSTR, UINT), user32.dll, MessageBoxA)(nullptr,
+			SecutyString("Hello from secure call!"),
+			SecutyString("Test"), MB_OK);
+
+		CALL_IN_MODULE(int(*)(HWND, LPCWSTR, LPCWSTR, UINT), user32.dll, MessageBoxW)(nullptr,
+			SecutyWString(L"Hello from secure call! -- WChar"),
+			SecutyWString(L"Test -- WChar"), MB_OK);
 
 	}
 	catch (const std::exception& e)
